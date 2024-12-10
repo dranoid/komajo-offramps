@@ -1,6 +1,3 @@
-import { BeneficiaryDetailEntity } from 'src/beneficiary-detail/entities/beneficiary-detail.entity';
-import { OfframpTransactionEntity } from 'src/offramp-transaction/entities/offramp-transaction.entity';
-import { UserEntity } from 'src/user/entities/user.entity';
 import { WalletEntity } from 'src/wallet/entities/wallet.entity';
 import {
   Column,
@@ -8,22 +5,19 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
-  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
+export enum TransactionType {
+  DEPOSIT = 'deposit',
+  WITHDRAWAL = 'withdrawal',
+}
 
 @Entity('transactions')
 export class TransactionEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
-
-  @Column('uuid')
-  userId: string;
-
-  @ManyToOne(() => UserEntity, (user) => user.transactions)
-  @JoinColumn({ name: 'userId' })
-  user: UserEntity;
 
   @Column('uuid')
   walletId: string;
@@ -32,28 +26,43 @@ export class TransactionEntity {
   @JoinColumn({ name: 'walletId' })
   wallet: WalletEntity;
 
+  @Column({ nullable: true })
+  blockchainAddress: string;
+
+  @Column({ nullable: true })
+  offrampsQuoteId: string;
+
   @Column({
     type: 'enum',
-    enum: ['WITHDRAWAL', 'DEPOSIT'],
+    enum: TransactionType,
   })
-  type: string;
+  type: TransactionType;
 
-  @Column('decimal', { precision: 18, scale: 8 })
-  amount: number;
+  @Column({ nullable: true, unique: true })
+  reference: string;
 
-  @Column('uuid', { nullable: true })
-  beneficiaryId: string;
+  @Column({ nullable: true })
+  sourceCurrency: string;
 
-  @ManyToOne(() => BeneficiaryDetailEntity)
-  @JoinColumn({ name: 'beneficiaryId' })
-  beneficiary: BeneficiaryDetailEntity;
+  @Column({ nullable: true })
+  targetCurrency: string;
 
-  @Column('uuid', { nullable: true })
-  offrampTransactionId: string;
+  @Column('decimal', { precision: 18, scale: 8, nullable: true })
+  sourceAmount: number;
+
+  @Column('decimal', { precision: 18, scale: 8, nullable: true })
+  targetAmount: number;
+
+  @Column('decimal', { precision: 10, scale: 4, nullable: true })
+  exchangeRate: number;
+
+  @Column('timestamp', { nullable: true })
+  quoteExpiresAt: Date;
 
   @Column({
     type: 'enum',
-    enum: ['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED'],
+    enum: ['PENDING_REVIEW', 'PROCESSING', 'COMPLETED', 'FAILED'],
+    default: 'PROCESSING',
   })
   status: string;
 
@@ -63,7 +72,9 @@ export class TransactionEntity {
   @UpdateDateColumn()
   updatedAt: Date;
 
-  @OneToOne(() => OfframpTransactionEntity)
-  @JoinColumn({ name: 'offrampTransactionId' })
-  offrampTransaction: OfframpTransactionEntity;
+  @Column('uuid', { nullable: true })
+  offrampsId: string;
+
+  @Column({ nullable: true })
+  offrampsStatus: string;
 }

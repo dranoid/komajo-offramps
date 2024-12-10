@@ -10,10 +10,7 @@ import {
 import { WalletService } from './wallet.service';
 import { Request as ExpressRequest } from 'express';
 import { DepositDto } from './dto/deposit.dto';
-import { WithdrawDto } from './dto/withdraw.dto';
-import { RolesEnum } from '../auth/dto/roles.enum';
 import { CurrencyParamDto } from './dto/param.dto';
-import { Public } from 'src/auth/public.decorator';
 
 @Controller('wallet')
 export class WalletController {
@@ -21,14 +18,12 @@ export class WalletController {
 
   @Get()
   async getWallets(@Request() req: ExpressRequest) {
-    const isAdmin = req['user'].roles.includes(RolesEnum.Admin);
-    return this.walletService.getWallets(req['user'].userId, isAdmin);
+    return this.walletService.getWallets(req['user'].userId, false);
   }
 
   @Get(':id')
   async getWallet(@Param('id') id: string, @Request() req: ExpressRequest) {
-    const isAdmin = req['user'].roles.includes(RolesEnum.Admin);
-    return this.walletService.getWallet(id, req['user'].userId, isAdmin);
+    return this.walletService.getWallet(id, req['user'].userId, false);
   }
 
   @Get(':currency')
@@ -36,11 +31,10 @@ export class WalletController {
     @Param() param: CurrencyParamDto,
     @Request() req: ExpressRequest,
   ) {
-    const isAdmin = req['user'].roles.includes(RolesEnum.Admin);
     return this.walletService.getWalletByCurrency(
       param.currency,
       req['user'].userId,
-      isAdmin,
+      false,
     );
   }
 
@@ -53,18 +47,22 @@ export class WalletController {
     return this.walletService.deposit(id, body, req['user'].userId);
   }
 
-  @Post(':id/withdraw')
-  async withdraw(
-    @Param('id') id: string,
-    @Body() body: WithdrawDto,
-    @Request() req: ExpressRequest,
-  ) {
-    return this.walletService.withdraw(id, body, req['user'].userId);
-  }
+  // @Post(':id/withdraw')
+  // async withdraw(
+  //   @Param('id') id: string,
+  //   @Body() body: WithdrawDto,
+  //   @Request() req: ExpressRequest,
+  // ) {
+  //   return this.walletService.initiateWithdraw(id, body, req['user'].userId);
+  // }
 
-  @Public()
   @Get('withdrawal-requirements')
   async getWithdrawalRequirements(@Query('countryCode') countryCode: string) {
     return this.walletService.getWithdrawalRequirements(countryCode);
+  }
+
+  @Get('rates')
+  async getRates() {
+    return this.walletService.getRates();
   }
 }

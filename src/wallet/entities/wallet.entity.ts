@@ -1,13 +1,10 @@
 import { TransactionEntity } from 'src/transaction/entities/transaction.entity';
-import { UserEntity } from 'src/user/entities/user.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
-  ManyToOne,
   OneToMany,
 } from 'typeorm';
 import { WalletType } from '../dto/wallet.enum';
@@ -19,10 +16,6 @@ export class WalletEntity {
 
   @Column('uuid')
   userId: string;
-
-  @ManyToOne(() => UserEntity, (user) => user.wallets)
-  @JoinColumn({ name: 'userId' })
-  user: UserEntity;
 
   @Column({
     type: 'enum',
