@@ -9,6 +9,7 @@ import {
   CreatePayoutQuoteDto,
   InitializePayoutQuoteDto,
   PayoutDto,
+  SingleTransactionDto,
 } from './dto/payout.dto';
 
 @Injectable()
@@ -205,5 +206,78 @@ export class TransactionService {
     } catch (error) {
       throw new InternalServerErrorException('Failed to send USDT to wallet');
     }
+  }
+
+  async createSingleTransaction(singleTransactionDto: SingleTransactionDto) {
+    try {
+      // Set fixed values
+      const source = 'onchain';
+      const fromAsset = 'usdt';
+      const chain = 'trc20';
+
+      const amount = singleTransactionDto.amount;
+      const toCurrency = singleTransactionDto.toCurrency;
+      const country = singleTransactionDto.country;
+      const beneficiary = singleTransactionDto.beneficiary;
+      const paymentReason = singleTransactionDto.paymentReason;
+      const clientMetaData = {};
+
+      const { data: createQuoteResponse } = await this.getOfframpsQuote({
+        source,
+        fromAsset,
+        toCurrency,
+        chain,
+        amount,
+      });
+
+      const { data: initializeQuoteResponse } =
+        await this.initializeOfframpsQuote({
+          quoteId: createQuoteResponse.quoteId,
+          customerId: this.generateRandomString(10),
+          country: this.sanitizeCountryName(country),
+          reference: this.generateRandomString(10),
+          beneficiary,
+          paymentReason,
+          callbackUrl: 'https://example.com/callback',
+          clientMetaData,
+        });
+
+      const walletAddress = initializeQuoteResponse.address;
+      const quoteId = initializeQuoteResponse.quoteId;
+      const centAmount = initializeQuoteResponse.amount * 100;
+
+      const { data: finalizeQuoteResponse } =
+        await this.finalizeOfframpsQuote(quoteId);
+
+      await this.sendUSDTToWallet({
+        address: walletAddress,
+        amount: centAmount,
+      });
+
+      const { data: getQuoteResponse } = await this.getQuoteByQuoteId(quoteId);
+
+      return {
+        quoteId,
+        status: getQuoteResponse.status,
+        paymentETA: finalizeQuoteResponse.paymentETA,
+        reference: finalizeQuoteResponse.reference,
+      };
+    } catch (error) {
+      throw new BadRequestException(error.response.data);
+    }
+  }
+
+  generateRandomString(length: number) {
+    return Math.random()
+      .toString(36)
+      .substring(2, length + 2);
+  }
+  sanitizeCountryName(country: string): string {
+    const countryMap: Record<string, string> = {
+      nigeria: 'NG',
+      australia: 'AU',
+      kenya: 'KE',
+    };
+    return countryMap[country.toLowerCase()] || country;
   }
 }

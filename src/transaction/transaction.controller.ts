@@ -4,6 +4,7 @@ import {
   CreatePayoutQuoteDto,
   InitializePayoutQuoteDto,
   PayoutDto,
+  SingleTransactionDto,
 } from './dto/payout.dto';
 
 @Controller('transaction')
@@ -62,5 +63,14 @@ export class TransactionController {
   @Get('supported-countries')
   async getSupportedCountries() {
     return this.transactionService.getSupportedCountries();
+  }
+
+  @Post('single-transaction')
+  async createSingleTransaction(
+    @Body() singleTransactionDto: SingleTransactionDto,
+  ) {
+    return this.transactionService.createSingleTransaction(
+      singleTransactionDto,
+    );
   }
 }
