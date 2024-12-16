@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query } from '@nestjs/common';
 import { TransactionService } from './transaction.service';
 import {
+  ConfirmPayoutDto,
   CreatePayoutQuoteDto,
   InitializePayoutQuoteDto,
   PayoutDto,
@@ -36,6 +37,12 @@ export class TransactionController {
     return this.transactionService.getQuoteById(id);
   }
 
+  @Get()
+  async getAll(@Query('page') page?: number) {
+    const pageNumber = page ? Number(page) : 1;
+    return this.transactionService.getAllQuotes(pageNumber);
+  }
+
   @Post('payouts/quote')
   async getOfframpsQuote(@Body() createPayoutQuoteDto: CreatePayoutQuoteDto) {
     return this.transactionService.getOfframpsQuote(createPayoutQuoteDto);
@@ -53,6 +60,11 @@ export class TransactionController {
   @Post('payouts/finalize')
   async finalizeOfframpsQuote(@Body('quoteId') quoteId: string) {
     return this.transactionService.finalizeOfframpsQuote(quoteId);
+  }
+
+  @Post('payouts/confirm')
+  async confirmPayout(@Body() confirmPayoutDto: ConfirmPayoutDto) {
+    return this.transactionService.confirmPayout(confirmPayoutDto);
   }
 
   @Post('send-usdt')

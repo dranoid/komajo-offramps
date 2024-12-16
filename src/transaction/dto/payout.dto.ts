@@ -4,6 +4,7 @@ export class CreatePayoutQuoteDto {
   toCurrency: string;
   chain: string;
   amount: number;
+  settlementAmount?: number;
 }
 
 export class InitializePayoutQuoteDto {
@@ -82,4 +83,16 @@ export interface SingleTransactionDto {
   paymentReason: string;
   country: string;
   beneficiary: NigeriaBankDto | KenyaMobileMoneyDto | AustraliaBankDto;
+}
+
+export interface ConfirmPayoutDto {
+  source: 'onchain' | 'offchain';
+  fromAsset: string;
+  toCurrency: string;
+  chain: 'trc20' | 'erc20' | 'mainnet' | 'lightning';
+  amount: number;
+  settlementAmount: number;
+  paymentReason: string;
+  beneficiary: AustraliaBankDto | NigeriaBankDto | KenyaMobileMoneyDto;
+  country: string;
 }

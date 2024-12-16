@@ -6,6 +6,7 @@ import {
 import { firstValueFrom } from 'rxjs';
 import { HttpService } from '@nestjs/axios';
 import {
+  ConfirmPayoutDto,
   CreatePayoutQuoteDto,
   InitializePayoutQuoteDto,
   PayoutDto,
@@ -127,12 +128,39 @@ export class TransactionService {
     }
   }
 
+  async getAllQuotes(page: number) {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(
+          `${process.env.NOBBLET_BASE_URL}/payouts?page=${page}`,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.NOBBLET_SECRET_KEY}`,
+            },
+          },
+        ),
+      );
+      return response.data;
+    } catch (error) {
+      throw new BadRequestException(error.response.data);
+    }
+  }
+
   async getOfframpsQuote(createPayoutQuoteDto: CreatePayoutQuoteDto) {
+    const stablecoins = ['usdt', 'usdc'];
+    const reqObj = {
+      ...createPayoutQuoteDto,
+      amount:
+        stablecoins.includes(createPayoutQuoteDto.fromAsset.toLowerCase()) &&
+        createPayoutQuoteDto.amount
+          ? createPayoutQuoteDto.amount * 100
+          : createPayoutQuoteDto.amount,
+    };
     try {
       const response = await firstValueFrom(
         this.httpService.post(
           `${process.env.NOBBLET_BASE_URL}/payouts/quotes`,
-          createPayoutQuoteDto,
+          reqObj,
           {
             headers: {
               Authorization: `Bearer ${process.env.NOBBLET_SECRET_KEY}`,
@@ -185,16 +213,62 @@ export class TransactionService {
       );
       return response.data;
     } catch (error) {
+      console.log(error.response.data);
       throw new BadRequestException(error.response.data);
     }
   }
 
+  async confirmPayout(confirmPayoutDto: ConfirmPayoutDto) {
+    const source = confirmPayoutDto.source;
+    const fromAsset = confirmPayoutDto.fromAsset;
+    const chain = confirmPayoutDto.chain;
+    const amount = confirmPayoutDto.amount;
+    const settlementAmount = confirmPayoutDto.settlementAmount;
+    const paymentReason = confirmPayoutDto.paymentReason;
+    const beneficiary = confirmPayoutDto.beneficiary;
+    const country = confirmPayoutDto.country;
+    const toCurrency = confirmPayoutDto.toCurrency;
+
+    const reqObj = {
+      source,
+      fromAsset,
+      chain,
+      toCurrency,
+      amount,
+      settlementAmount,
+    };
+
+    if (!amount) {
+      delete reqObj.amount;
+    } else if (!settlementAmount) {
+      delete reqObj.settlementAmount;
+    }
+
+    const { data: createQuoteResponse } = await this.getOfframpsQuote(reqObj);
+
+    const initializeQuoteResponse = await this.initializeOfframpsQuote({
+      quoteId: createQuoteResponse.quoteId,
+      customerId: this.generateRandomString(10),
+      country: this.sanitizeCountryName(country),
+      reference: this.generateRandomString(10),
+      beneficiary,
+      paymentReason,
+      callbackUrl: 'https://example.com/callback',
+      clientMetaData: {},
+    });
+    return initializeQuoteResponse;
+  }
+
   async sendUSDTToWallet(payoutDto: PayoutDto) {
+    const reqObj = {
+      ...payoutDto,
+      amount: payoutDto.amount * 100,
+    };
     try {
       const response = await firstValueFrom(
         this.httpService.post(
           `${process.env.NOBBLET_BASE_URL}/payouts/simulate-address-deposit`,
-          payoutDto,
+          reqObj,
           {
             headers: {
               Authorization: `Bearer ${process.env.NOBBLET_SECRET_KEY}`,
@@ -204,6 +278,7 @@ export class TransactionService {
       );
       return response.data;
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException('Failed to send USDT to wallet');
     }
   }
